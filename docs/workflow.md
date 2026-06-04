@@ -99,6 +99,8 @@ Closes the cycle. Can be used outside the pipeline to revisit previous deliverie
 6. Saves all artifacts locally in `.ship/YYYY-MM-DD-<title>/`.
 7. Spawns `git-agent` to create PR.
 
+**SonarQube integration (opt-in):** if `sonar-project.properties` exists at the project root, the `reviewer` runs a full SonarQube static analysis before producing the review summary. See [Optional integrations — SonarQube](#sonarqube-via-docker) below.
+
 ---
 
 ## Complementary Commands
@@ -163,3 +165,41 @@ Scans the source tree and rewrites `.skills/patterns.md` with updated canonical 
 | `docs/workflow.pt-br.md` | This document (Português BR) |
 
 `.plans/`, `.prds/`, and `.ship/` are gitignored by default. Recommended practice: remove them from `.gitignore` on feature branches and include them in the PR. They serve as live ADRs — the record of why code was written, what was deferred, and what risks were accepted.
+
+---
+
+## Optional integrations
+
+### SonarQube via Docker *(experimental)*
+
+> Not yet validated across all stacks and CI configurations. Treat findings as supplementary signal.
+
+The `reviewer` agent supports SonarQube static analysis as an opt-in integration. When active, findings (code smells, bugs, vulnerabilities) are included in the review summary with the same `BLOCKER | WARNING | SUGGESTION` severity labels.
+
+**Activation:** create `sonar-project.properties` at the project root. Its presence is the opt-in signal — the reviewer runs analysis automatically on every `/bsdd-ship`.
+
+**`sonar-project.properties` — project identity only (safe to commit):**
+
+```properties
+sonar.projectKey=my-project
+sonar.sources=src
+sonar.exclusions=**/test/**,**/vendor/**
+```
+
+Do not add `sonar.host.url` or `sonar.token` to this file. The skill injects them as CLI overrides at runtime so the file is safe for CI pipelines that use their own host and token. A GitHub Actions SonarQube/SonarCloud step passes its own `-D` flags and will not be affected.
+
+**Setup: Docker only.** No CLI installation, no manual token setup.
+
+On first use the skill starts `bsdd-sonarqube`, auto-generates a token via the SonarQube API, and saves it to `.bsdd-sonar-token` (gitignored). Subsequent reviews reuse the stored token. The scanner runs as an ephemeral `sonarsource/sonar-scanner-cli` container on the shared `bsdd-sonar-net` network. If SonarQube fails to become healthy within 120s, the review is blocked with an explicit error.
+
+**Severity mapping:**
+
+| Sonar severity | Sonar type | Reviewer label |
+|---|---|---|
+| BLOCKER / CRITICAL | any | `BLOCKER` |
+| MAJOR | BUG / VULNERABILITY | `BLOCKER` |
+| MAJOR | CODE_SMELL | `WARNING` |
+| MINOR / INFO | any | `SUGGESTION` |
+| Security hotspot | any | `WARNING` |
+
+Only issues in files present in the current diff are surfaced. Project-wide findings outside the changeset are ignored.

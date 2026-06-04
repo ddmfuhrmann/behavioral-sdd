@@ -65,3 +65,11 @@ See `docs/workflow.md` for the full guide.
 | `.skills/database-seeding.md` | Seeding realistic data for perf tests |
 | `.skills/postgres-explain-analyze.md` | Query analysis procedure |
 | `.skills/optimization-reporting.md` | Optimization report format |
+
+## Optional integrations *(experimental)*
+
+| Skill | Activation | Purpose |
+|---|---|---|
+| `.skills/sonar-analysis.md` | Add `sonar-project.properties` to project root | SonarQube static analysis (code smells, bugs, vulnerabilities) injected into the review step |
+
+Note: `sonar-project.properties` must contain project identity only (`projectKey`, `sources`, `exclusions`). Do not add `sonar.host.url` or `sonar.token` — the skill injects them at runtime, keeping the file safe for CI pipelines.
