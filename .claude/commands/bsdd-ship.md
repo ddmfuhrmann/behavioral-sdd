@@ -7,6 +7,7 @@ Unifies review, ADR check, and handoff into a single conversational flow. Trigge
 1. Spawn the `git-agent` to get the diff (`git diff main`).
 2. Identify the related plan (from conversation context or ask).
 3. Spawn the `reviewer` with: plan content + diff + implementation summary + test summary.
+   - Before spawning, check whether `sonar-project.properties` exists at the project root. If yes, instruct the reviewer explicitly: "SonarQube is active — execute `.skills/sonar-analysis.md` before producing findings."
 4. For each relevant finding from the reviewer, use `AskUserQuestion`:
    - Present the finding and ask for action: "Fix now" / "Defer" / "Open issue" (Recommended varies by severity: BLOCKER → fix, WARNING → defer, SUGGESTION → open issue).
    - If "Fix now": spawn the `feature-implementer` to apply the fix.
