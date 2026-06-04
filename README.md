@@ -251,6 +251,14 @@ Apply to POST /api/messages with limit=60, window=60.
 | All `.claude/commands/bsdd-*.md` | Workflow commands — no changes needed |
 | All `.claude/agents/*.md` | Subagents — no changes needed |
 
+### Optional integrations *(experimental)*
+
+| File | Purpose | Activation |
+|---|---|---|
+| `.skills/sonar-analysis.md` | SonarQube static analysis in the review step | Add `sonar-project.properties` to the project root |
+
+Requires Docker. Token is auto-generated on first use and stored in `.bsdd-sonar-token` (gitignored). See `docs/workflow.md` for details.
+
 ---
 
 ## Local artifacts

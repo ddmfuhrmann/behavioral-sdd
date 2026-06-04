@@ -32,7 +32,8 @@ Secondary question: **does it follow project guidelines without introducing unne
 4. Check plan coverage (every scope item present in diff?).
 5. Check for scope creep (anything in diff not in plan?).
 6. Check guideline compliance.
-7. Produce the review summary with severity-labeled findings.
+7. **Sonar analysis (opt-in):** follow `.skills/sonar-analysis.md`. If `sonar-project.properties` is absent, skip. If present and SonarQube is unreachable, block and do not produce the review summary.
+8. Produce the review summary with severity-labeled findings, including the Sonar section if analysis ran.
 
 ## What to look for
 
@@ -80,6 +81,10 @@ Secondary question: **does it follow project guidelines without introducing unne
 
 - <item>
 
+### Sonar Analysis Findings
+
+<findings from sonar-analysis skill, or "Sonar: skipped (no sonar-project.properties).">
+
 ### Test Coverage Assessment
 
 <brief assessment of whether tests cover the plan's assertions>
@@ -92,3 +97,4 @@ Secondary question: **does it follow project guidelines without introducing unne
 - `.skills/error-handling.md`
 - `.skills/karpathy-guidelines.md`
 - `.skills/caveman.md`
+- `.skills/sonar-analysis.md`
