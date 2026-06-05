@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.0.3] - 2026-06-05
+
+### Added
+- `bsdd-prd`: slice decomposition step for features estimated at > 500 lines — collects kebab-case title, description, estimated size, and dependencies per slice; saved PRD includes a `## Slices` table; if decomposition is declined, a note is added to the PRD instead
+- `bsdd-ship`: PR size warning — warns at 600–900 changed lines (vs `main`), stronger warning above 900 suggesting a return to `/bsdd-prd`; flow is never blocked
+
+---
+
 ## [0.0.2] - 2026-06-05
 
 ### Added
@@ -50,7 +58,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Skills: `caveman`, `karpathy-guidelines`, `code-style`, `diff-review`, `grill-me`, `plan-first-development`, `edge-case-generation`, `error-handling`, `testing-strategy`, `benchmark-execution`, `database-seeding`, `postgres-explain-analyze`, `optimization-reporting`
 - Workflow documentation in English (`docs/workflow.md`) and Portuguese BR (`docs/workflow.pt-br.md`)
 
-[Unreleased]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.0...v0.0.1
 [0.0.0]: https://github.com/ddmfuhrmann/behavioral-sdd/releases/tag/v0.0.0

@@ -90,7 +90,7 @@ skills) before delivering value. It is not a zero-config tool.
 |---|---|
 | Tiny fix, one-liners | Plan inline in conversation |
 | Normal task | `/bsdd-plan` |
-| Large feature | `/bsdd-prd` → `/bsdd-plan` |
+| Large feature (> 500 lines) | `/bsdd-prd` (slice decomposition) → `/bsdd-plan` per slice |
 | Performance issue | `/bsdd-optimize` |
 
 **When not to use the full cycle:**
@@ -136,7 +136,7 @@ See `docs/workflow.md` for the full guide (with optimize and PRD flows).
 
 | Command | When to use |
 |---|---|
-| `/bsdd-prd` | Before plan, for larger-scope features — collects requirements via grill-me |
+| `/bsdd-prd` | Before plan, for larger-scope features; triggers slice decomposition for features > 500 lines |
 | `/bsdd-plan` | Always — entry point of the cycle |
 | `/bsdd-implement <title>` | After grill-me completes and plan is saved |
 | `/bsdd-ship` | After implement completes successfully |
