@@ -89,7 +89,7 @@ Orchestrates the full implementation. The argument is the kebab-case plan title.
 
 ### /bsdd-ship
 
-Closes the cycle. Can be used outside the pipeline to revisit previous deliveries.
+Closes the cycle. Can be used outside the pipeline to revisit previous deliveries. Before spawning the reviewer, checks the PR size via `git diff main --stat`: emits an inline warning at 600–900 changed lines, and a stronger warning above 900, suggesting a return to `/bsdd-prd` to decompose into slices. The flow is never blocked.
 
 1. Spawns `git-agent` to get the diff.
 2. Spawns `reviewer` with plan + diff + summaries.
@@ -116,7 +116,7 @@ In both cases, the report is saved locally in `.plans/YYYY-MM-DD-<title>-optimiz
 
 ### /bsdd-prd
 
-Creates a PRD via conversational grill-me. Use for larger-scope features before `/bsdd-plan`. One question at a time: name, problem, measurable objective, requirements, out of scope, acceptance criteria, blockers.
+Creates a PRD via conversational grill-me. Use for larger-scope features before `/bsdd-plan`. One question at a time: name, problem, measurable objective, requirements, out of scope, acceptance criteria, blockers. For features estimated to exceed 500 lines, a slice decomposition loop is triggered before saving: each slice receives a kebab-case title, description, estimated line count, and dependencies. The saved PRD includes a `## Slices` table. If decomposition is declined, a note is added to the PRD instead.
 
 ### /bsdd-sync-patterns
 

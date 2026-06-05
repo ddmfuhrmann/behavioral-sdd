@@ -4,7 +4,11 @@ Unifies review, ADR check, and handoff into a single conversational flow. Trigge
 
 ## Procedure
 
-1. Spawn the `git-agent` to get the diff (`git diff main`).
+1. Spawn the `git-agent` to get the diff (`git diff main`) and `git diff main --stat`.
+1b. Count changed lines from the `--stat` output.
+   - If 600–900 lines: emit an inline warning — "⚠ This PR touches N lines. Consider splitting into slices before review."
+   - If >900 lines: emit a stronger inline warning — "⚠ This PR touches N lines (>900). Large PRs make review harder. Consider returning to `/bsdd-prd` to decompose into slices."
+   - In both cases: continue to step 2 normally — do NOT block, do NOT use `AskUserQuestion` for this.
 2. Identify the related plan (from conversation context or ask).
 3. Spawn the `reviewer` with: plan content + diff + implementation summary + test summary.
    - Before spawning, check whether `sonar-project.properties` exists at the project root. If yes, instruct the reviewer explicitly: "SonarQube is active — execute `.skills/sonar-analysis.md` before producing findings."
