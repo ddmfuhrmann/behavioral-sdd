@@ -18,6 +18,6 @@ Unifies review, ADR check, and handoff into a single conversational flow. Trigge
    - "What is the next step after this delivery?" (options based on context)
    - "Are there pending decisions that should be recorded?"
    - "Are there known risks for production?"
-7. Save locally in `.ship/YYYY-MM-DD-<title>/`: review summary + ADRs (if any) + handoff doc.
-8. Spawn the `git-agent` to create the PR with the generated summary.
+7. Save locally in `.ship/YYYY-MM-DD-<title>/`: review summary + ADRs (if any) + handoff doc. These files are listed in `.gitignore` and must **not** be committed.
+8. Spawn the `git-agent` to create the PR with the generated summary. Pass only source-code files as the files to stage — never `.plans/`, `.ship/`, or `.prds/` paths.
 9. Confirm with the PR URL created.
