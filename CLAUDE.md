@@ -66,10 +66,30 @@ See `docs/workflow.md` for the full guide.
 | `.skills/postgres-explain-analyze.md` | Query analysis procedure |
 | `.skills/optimization-reporting.md` | Optimization report format |
 
-## Optional integrations *(experimental)*
+## Plugins *(experimental)*
 
-| Skill | Activation | Purpose |
-|---|---|---|
-| `.skills/sonar-analysis.md` | Add `sonar-project.properties` to project root | SonarQube static analysis (code smells, bugs, vulnerabilities) injected into the review step |
+Plugins augment sub-agents with external tool analysis. Declare them per sub-agent in `.bsdd-plugins.yml` at your project root:
 
-Note: `sonar-project.properties` must contain project identity only (`projectKey`, `sources`, `exclusions`). Do not add `sonar.host.url` or `sonar.token` — the skill injects them at runtime, keeping the file safe for CI pipelines.
+```yaml
+# .bsdd-plugins.yml
+plugins:
+  reviewer:
+    sonar:
+      enabled: auto        # auto = only if sonar-project.properties exists
+    xlint-removal:
+      enabled: auto        # auto = only if Java build file exists
+    trivy:
+      enabled: auto        # auto = only if Docker is available
+```
+
+`enabled` values: `auto` (default — opt-in by detection), `true` (always run), `false` (never run).
+
+If `.bsdd-plugins.yml` is absent, all plugins default to `auto`.
+
+| Plugin | Sub-agent | Purpose | Auto-detection |
+|---|---|---|---|
+| `sonar` | reviewer | SonarQube static analysis | `sonar-project.properties` present |
+| `xlint-removal` | reviewer | `@Deprecated(forRemoval=true)` warnings — Java only | Java build file present |
+| `trivy` | reviewer | CVE scan on dependencies | Docker available |
+
+> Plugins for other sub-agents (`implementer`, `ship`, `optimizer`) and per-plugin options (e.g. `severity: MAJOR`) are reserved for future versions.

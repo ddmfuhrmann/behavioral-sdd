@@ -99,7 +99,7 @@ Fecha o ciclo. Pode ser usado fora do pipeline para revisitar entregas anteriore
 6. Salva todos os artefatos localmente em `.ship/YYYY-MM-DD-<título>/`.
 7. Spawna `git-agent` para criar PR.
 
-**Integração com SonarQube (opt-in):** se `sonar-project.properties` existir na raiz do projeto, o `reviewer` executa análise estática completa via SonarQube antes de produzir o review summary. Veja [Integrações opcionais — SonarQube](#sonarqube-via-docker) abaixo.
+**Integrações via plugins (opt-in):** se `.bsdd-plugins.yml` existir na raiz do projeto, o `reviewer` executa os plugins declarados antes de produzir o review summary. Se ausente, todos os plugins conhecidos rodam em modo `auto`. Veja [Integrações opcionais — Plugins](#plugins-experimental) abaixo.
 
 ---
 
@@ -170,36 +170,32 @@ Escaneia o código-fonte e reescreve `.skills/patterns.md` com snippets canônic
 
 ## Integrações opcionais
 
-### SonarQube via Docker *(experimental)*
+### Plugins *(experimental)*
 
-> Ainda não validado em todos os stacks e configurações de CI. Trate os findings como sinal suplementar.
+Plugins incrementam os sub-agentes com harness de ferramentas externas. Configure via `.bsdd-plugins.yml` na raiz do projeto:
 
-O agente `reviewer` suporta análise estática via SonarQube como integração opt-in. Quando ativa, os findings (code smells, bugs, vulnerabilidades) são incluídos no review summary com os mesmos rótulos de severidade `BLOCKER | WARNING | SUGGESTION`.
-
-**Ativação:** crie `sonar-project.properties` na raiz do projeto. A presença do arquivo é o sinal de opt-in — o reviewer executa a análise automaticamente em todo `/bsdd-ship`.
-
-**`sonar-project.properties` — apenas identidade do projeto (seguro de commitar):**
-
-```properties
-sonar.projectKey=meu-projeto
-sonar.sources=src
-sonar.exclusions=**/test/**,**/vendor/**
+```yaml
+# .bsdd-plugins.yml
+plugins:
+  reviewer:
+    sonar:
+      enabled: auto
+    xlint-removal:
+      enabled: auto
+    trivy:
+      enabled: auto
 ```
 
-Não adicione `sonar.host.url` ou `sonar.token` neste arquivo. A skill os injeta como overrides de CLI em tempo de execução, mantendo o arquivo compatível com pipelines de CI que usam seu próprio host e token. Um step de SonarQube/SonarCloud no GitHub Actions passa seus próprios flags `-D` e não é afetado.
+`enabled: auto` (padrão) usa a detecção própria de cada plugin. `true` força a execução, `false` desabilita.
 
-**Setup: apenas Docker.** Sem instalação de CLI, sem configuração manual de token.
+Plugins disponíveis para o sub-agente `reviewer`:
 
-No primeiro uso, a skill sobe o `bsdd-sonarqube`, gera um token automaticamente via API do SonarQube e salva em `.bsdd-sonar-token` (gitignored). Reviews seguintes reutilizam o token salvo. O scanner roda como container efêmero `sonarsource/sonar-scanner-cli` na network compartilhada `bsdd-sonar-net`. Se o SonarQube não ficar saudável em 120s, o review é bloqueado com mensagem de erro explícita.
-
-**Mapeamento de severidade:**
-
-| Severidade Sonar | Tipo Sonar | Label do reviewer |
+| Plugin | Propósito | Gatilho de detecção automática |
 |---|---|---|
-| BLOCKER / CRITICAL | qualquer | `BLOCKER` |
-| MAJOR | BUG / VULNERABILITY | `BLOCKER` |
-| MAJOR | CODE_SMELL | `WARNING` |
-| MINOR / INFO | qualquer | `SUGGESTION` |
-| Security hotspot | qualquer | `WARNING` |
+| `sonar` | Análise estática via SonarQube (Docker) | `sonar-project.properties` na raiz do projeto |
+| `xlint-removal` | Warnings Java `@Deprecated(forRemoval=true)` | `build.gradle.kts`, `build.gradle` ou `pom.xml` na raiz |
+| `trivy` | Scan de CVEs em dependências diretas e transitivas | Docker disponível (`docker info` retorna 0) |
 
-Apenas issues em arquivos presentes no diff atual são exibidos. Findings do projeto fora do changeset são ignorados.
+Se `.bsdd-plugins.yml` estiver ausente, todos os plugins rodam em modo `auto` — mesmo comportamento de antes desta feature.
+
+Os arquivos de plugin ficam em `.skills/plugins/` no repositório behavioral-sdd. Cada arquivo é autocontido: descreve propósito, detecção automática, procedimento, mapeamento de severidade e formato de output.

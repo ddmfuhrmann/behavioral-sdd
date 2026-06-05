@@ -2,6 +2,8 @@
 
 Behavioral Spec-Driven Development: a workflow for Claude Code that enforces plan-first development, spec-driven implementation, and isolated subagent orchestration.
 
+[Changelog](CHANGELOG.md)
+
 ---
 
 ## What is behavioral-sdd
@@ -251,13 +253,33 @@ Apply to POST /api/messages with limit=60, window=60.
 | All `.claude/commands/bsdd-*.md` | Workflow commands — no changes needed |
 | All `.claude/agents/*.md` | Subagents — no changes needed |
 
-### Optional integrations *(experimental)*
+### Plugins *(experimental)*
 
-| File | Purpose | Activation |
-|---|---|---|
-| `.skills/sonar-analysis.md` | SonarQube static analysis in the review step | Add `sonar-project.properties` to the project root |
+Plugins augment sub-agents with external tool analysis. Declare them per sub-agent in `.bsdd-plugins.yml` at your project root:
 
-Requires Docker. Token is auto-generated on first use and stored in `.bsdd-sonar-token` (gitignored). See `docs/workflow.md` for details.
+```yaml
+# .bsdd-plugins.yml
+plugins:
+  reviewer:
+    sonar:
+      enabled: auto        # auto = only if sonar-project.properties exists
+    xlint-removal:
+      enabled: auto        # auto = only if Java build file exists
+    trivy:
+      enabled: auto        # auto = only if Docker is available
+```
+
+`enabled` values: `auto` (default — opt-in by detection), `true` (always run), `false` (never run).
+
+If `.bsdd-plugins.yml` is absent, all plugins default to `auto`.
+
+| Plugin | Sub-agent | Purpose | Auto-detection |
+|---|---|---|---|
+| `sonar` | reviewer | SonarQube static analysis | `sonar-project.properties` present |
+| `xlint-removal` | reviewer | `@Deprecated(forRemoval=true)` warnings — Java only | Java build file present |
+| `trivy` | reviewer | CVE scan on dependencies | Docker available |
+
+> Plugins for other sub-agents (`implementer`, `ship`, `optimizer`) and per-plugin options (e.g. `severity: MAJOR`) are reserved for future versions.
 
 ---
 

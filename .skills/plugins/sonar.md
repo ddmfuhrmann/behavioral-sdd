@@ -1,9 +1,15 @@
-# Skill: SonarQube Analysis (experimental)
+# Plugin: Sonar Analysis
 
 ## Purpose
-Run SonarQube static analysis on the project and return severity-labeled findings mapped to the reviewer format. Only active when `sonar-project.properties` exists at the project root. Requires only Docker — no manual token setup or extra CLI installation.
+
+Run SonarQube static analysis on the project and return severity-labeled findings mapped to the reviewer format. Requires only Docker — no manual token setup or extra CLI installation.
 
 > **Experimental.** This integration works well in practice but has not been widely validated across stacks and CI configurations. Treat findings as supplementary signal, not a hard gate.
+
+## Auto-detection
+
+When `enabled: auto`: active only if `sonar-project.properties` exists at the project root.
+When `enabled: true`: always active.
 
 ## Docker resources
 
@@ -15,19 +21,13 @@ Run SonarQube static analysis on the project and return severity-labeled finding
 
 ## Token management
 
-The skill auto-generates a SonarQube token on first use and stores it in `.bsdd-sonar-token` at the project root. Subsequent runs read from this file. No manual token setup required.
+The plugin auto-generates a SonarQube token on first use and stores it in `.bsdd-sonar-token` at the project root. Subsequent runs read from this file. No manual token setup required.
 
 `.bsdd-sonar-token` must be gitignored — add it if not already present:
 
 ```bash
 echo ".bsdd-sonar-token" >> .gitignore
 ```
-
-## Opt-in detection
-
-Check for `sonar-project.properties` in the project root:
-- **File absent** → skip this skill entirely. Do not mention Sonar in the review output.
-- **File present** → analysis is mandatory. Block review if any Docker step fails.
 
 ## Prerequisites (project-side)
 
@@ -40,9 +40,20 @@ sonar.sources=src
 sonar.exclusions=**/test/**,**/vendor/**
 ```
 
-`sonar.host.url` and `sonar.token` are injected by this skill at runtime (local) and by the CI workflow via its own flags or environment variables. No overlap, no conflict.
+`sonar.host.url` and `sonar.token` are injected by this plugin at runtime (local) and by the CI workflow via its own flags or environment variables. No overlap, no conflict.
 
 ## Procedure
+
+### 0. Resolve projectKey
+
+Read `sonar.projectKey` from `sonar-project.properties`:
+
+```bash
+PROJECT_KEY=$(grep "^sonar.projectKey" sonar-project.properties | cut -d'=' -f2 | tr -d ' ')
+```
+
+If `PROJECT_KEY` is empty: **abort and block the review** with message:
+> `[SONAR BLOCKED] sonar.projectKey not found in sonar-project.properties`
 
 ### 1. Ensure Docker network exists
 
@@ -126,7 +137,7 @@ Poll the Compute Engine queue until the task for this project completes (timeout
 
 ```bash
 curl -s -u "${SONAR_TOKEN}:" \
-  "http://localhost:9000/api/ce/component?component=<projectKey>"
+  "http://localhost:9000/api/ce/component?component=${PROJECT_KEY}"
 ```
 
 Wait until `status` is `SUCCESS`. If `FAILED`: block review with the CE task error message.
@@ -135,7 +146,7 @@ Wait until `status` is `SUCCESS`. If `FAILED`: block review with the CE task err
 
 ```bash
 curl -s -u "${SONAR_TOKEN}:" \
-  "http://localhost:9000/api/issues/search?componentKeys=<projectKey>&resolved=false&ps=500"
+  "http://localhost:9000/api/issues/search?componentKeys=${PROJECT_KEY}&resolved=false&ps=500"
 ```
 
 Filter results to only files present in the current diff. Ignore issues in files not touched by this change.
@@ -167,105 +178,3 @@ Emit findings in the reviewer's standard format, under a dedicated section:
 ```
 
 If no issues found in the diff scope: emit `Sonar: no issues found in changed files.`
-
----
-
-## Compiler Removal Warnings
-
-Active when `build.gradle.kts` or `build.gradle` exists at the project root.
-
-Detects usage of APIs annotated `@Deprecated(forRemoval=true)` — the JDK flags these natively but standard static analysis tools miss them because they require indexing dependency JARs deeply.
-
-### Procedure
-
-#### 1. Create temporary Gradle init script
-
-```bash
-INIT_SCRIPT=$(mktemp /tmp/xlint-removal-XXXXXX.gradle.kts)
-cat > "$INIT_SCRIPT" << 'GRADLE'
-allprojects {
-    tasks.withType<JavaCompile> {
-        options.compilerArgs.addAll(listOf("-Xlint:removal"))
-    }
-}
-GRADLE
-```
-
-#### 2. Compile with removal warnings enabled
-
-```bash
-./gradlew compileJava --rerun --init-script "$INIT_SCRIPT" 2>&1 \
-  | grep -E "warning:.*\[removal\]" \
-  | sort -u
-rm -f "$INIT_SCRIPT"
-```
-
-Do not fail the review if compilation itself fails — only report `[removal]` lines.
-
-#### 3. Severity mapping
-
-All `[removal]` warnings → **[BLOCKER]**: APIs marked for removal will break on the next major version upgrade.
-
-#### 4. Output format
-
-```
-### Compiler Removal Warnings
-
-[BLOCKER] sales/application/usecase/ListCommissionsUseCase.java:41 — where(Specification<T>) in JpaSpecificationExecutor has been deprecated and marked for removal
-```
-
-If no warnings: emit `Compiler: no removal warnings found.`
-
----
-
-## Dependency Vulnerability Scan
-
-Active when Docker is available (`docker info` exits 0).
-
-Uses Trivy to scan project dependencies for known CVEs — covers direct and transitive dependencies. SonarQube Community does not include this check.
-
-### Procedure
-
-#### 1. Run Trivy
-
-```bash
-docker run --rm \
-  -v "$(pwd):/project" \
-  aquasec/trivy:latest fs /project \
-  --scanners vuln \
-  --severity HIGH,CRITICAL \
-  --format json \
-  --quiet \
-  2>/dev/null
-```
-
-If Docker is unavailable or the image fails to run: skip silently and emit `Trivy: skipped (Docker unavailable).`
-
-#### 2. Parse JSON output
-
-Extract from `.Results[].Vulnerabilities[]`:
-- `VulnerabilityID` — CVE ID
-- `PkgName` + `InstalledVersion` — affected library
-- `Severity` — `HIGH` or `CRITICAL`
-- `Title` — short description
-- `CVSS.nvd.V3Score` or `CVSS.ghsa.V3Score` — numeric score
-
-Deduplicate by `VulnerabilityID` + `PkgName`.
-
-#### 3. Severity mapping
-
-| Trivy severity | → Reviewer severity |
-|---|---|
-| CRITICAL | BLOCKER |
-| HIGH | WARNING |
-
-#### 4. Output format
-
-```
-### Dependency Vulnerability Scan
-
-[BLOCKER] commons-lang3:3.17.0 — CVE-2025-XXXX Remote code execution via deserialization (CVSS 9.8)
-[WARNING]  jackson-databind:2.17.0 — CVE-2024-XXXX Deserialization of untrusted data (CVSS 7.5)
-```
-
-If no vulnerabilities: emit `Trivy: no HIGH/CRITICAL vulnerabilities found.`
