@@ -8,7 +8,7 @@ Este workflow é **spec-driven e plan-first**: nenhum código é escrito sem um 
 
 Decisões principais:
 
-- **Prefixo `f-`** — evita colisão com skills nativas do Claude Code (`/plan`, `/review`, `/test`).
+- **Prefixo `bsdd-`** — evita colisão com skills nativas do Claude Code (`/plan`, `/review`, `/test`).
 - **Grill-me como loop conversacional** — integrado ao `/bsdd-plan` via `AskUserQuestion`, uma pergunta por vez, sem comando separado.
 - **`/bsdd-implement` orquestra implement + test + loop de correção** — sem necessidade de invocar `/test` separadamente.
 - **`/bsdd-ship` unifica review + ADR check + handoff** — um único comando para fechar o ciclo.
