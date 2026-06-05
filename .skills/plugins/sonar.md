@@ -1,9 +1,15 @@
-# Skill: SonarQube Analysis (experimental)
+# Plugin: Sonar Analysis
 
 ## Purpose
-Run SonarQube static analysis on the project and return severity-labeled findings mapped to the reviewer format. Only active when `sonar-project.properties` exists at the project root. Requires only Docker — no manual token setup or extra CLI installation.
+
+Run SonarQube static analysis on the project and return severity-labeled findings mapped to the reviewer format. Requires only Docker — no manual token setup or extra CLI installation.
 
 > **Experimental.** This integration works well in practice but has not been widely validated across stacks and CI configurations. Treat findings as supplementary signal, not a hard gate.
+
+## Auto-detection
+
+When `enabled: auto`: active only if `sonar-project.properties` exists at the project root.
+When `enabled: true`: always active.
 
 ## Docker resources
 
@@ -15,19 +21,13 @@ Run SonarQube static analysis on the project and return severity-labeled finding
 
 ## Token management
 
-The skill auto-generates a SonarQube token on first use and stores it in `.bsdd-sonar-token` at the project root. Subsequent runs read from this file. No manual token setup required.
+The plugin auto-generates a SonarQube token on first use and stores it in `.bsdd-sonar-token` at the project root. Subsequent runs read from this file. No manual token setup required.
 
 `.bsdd-sonar-token` must be gitignored — add it if not already present:
 
 ```bash
 echo ".bsdd-sonar-token" >> .gitignore
 ```
-
-## Opt-in detection
-
-Check for `sonar-project.properties` in the project root:
-- **File absent** → skip this skill entirely. Do not mention Sonar in the review output.
-- **File present** → analysis is mandatory. Block review if any Docker step fails.
 
 ## Prerequisites (project-side)
 
@@ -40,9 +40,20 @@ sonar.sources=src
 sonar.exclusions=**/test/**,**/vendor/**
 ```
 
-`sonar.host.url` and `sonar.token` are injected by this skill at runtime (local) and by the CI workflow via its own flags or environment variables. No overlap, no conflict.
+`sonar.host.url` and `sonar.token` are injected by this plugin at runtime (local) and by the CI workflow via its own flags or environment variables. No overlap, no conflict.
 
 ## Procedure
+
+### 0. Resolve projectKey
+
+Read `sonar.projectKey` from `sonar-project.properties`:
+
+```bash
+PROJECT_KEY=$(grep "^sonar.projectKey" sonar-project.properties | cut -d'=' -f2 | tr -d ' ')
+```
+
+If `PROJECT_KEY` is empty: **abort and block the review** with message:
+> `[SONAR BLOCKED] sonar.projectKey not found in sonar-project.properties`
 
 ### 1. Ensure Docker network exists
 
@@ -126,7 +137,7 @@ Poll the Compute Engine queue until the task for this project completes (timeout
 
 ```bash
 curl -s -u "${SONAR_TOKEN}:" \
-  "http://localhost:9000/api/ce/component?component=<projectKey>"
+  "http://localhost:9000/api/ce/component?component=${PROJECT_KEY}"
 ```
 
 Wait until `status` is `SUCCESS`. If `FAILED`: block review with the CE task error message.
@@ -135,7 +146,7 @@ Wait until `status` is `SUCCESS`. If `FAILED`: block review with the CE task err
 
 ```bash
 curl -s -u "${SONAR_TOKEN}:" \
-  "http://localhost:9000/api/issues/search?componentKeys=<projectKey>&resolved=false&ps=500"
+  "http://localhost:9000/api/issues/search?componentKeys=${PROJECT_KEY}&resolved=false&ps=500"
 ```
 
 Filter results to only files present in the current diff. Ignore issues in files not touched by this change.
