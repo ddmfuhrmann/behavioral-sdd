@@ -8,7 +8,7 @@ This workflow is **spec-driven and plan-first**: no code is written without a sa
 
 Key design decisions:
 
-- **`f-` prefix** — avoids collision with native Claude Code skills (`/plan`, `/review`, `/test`).
+- **`bsdd-` prefix** — avoids collision with native Claude Code skills (`/plan`, `/review`, `/test`).
 - **Grill-me as a conversational loop** — integrated into `/bsdd-plan` via `AskUserQuestion`, one question at a time, no separate command.
 - **`/bsdd-implement` orchestrates implement + test + correction loop** — no need to invoke `/test` separately.
 - **`/bsdd-ship` unifies review + ADR check + handoff** — one command to close the cycle.
