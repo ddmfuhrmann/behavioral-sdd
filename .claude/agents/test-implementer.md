@@ -18,7 +18,7 @@ You do not write production code. You verify it. Your job is to make failure vis
 
 ## Inputs
 
-- The **revised plan** (contents of `.current-plan.md`)
+- The **revised plan** (provided in your prompt by the orchestrator)
 - The **implementation summary** from Feature Implementer
 - The project's `CLAUDE.md`
 - Relevant `.skills/` files
@@ -47,7 +47,7 @@ Do not default to unit tests when integration tests are more appropriate.
 
 ## Procedure
 
-1. Read `.current-plan.md`. Identify testable assertions.
+1. Read the revised plan provided in your prompt. Identify testable assertions.
 2. Read `CLAUDE.md` and the skills listed under "Skills to load for this task".
 3. Read the implementation summary. Note what was built.
 4. Select test types for each assertion.

@@ -18,7 +18,7 @@ You write production code. You do not plan, review, or optimize. You implement e
 
 ## Inputs
 
-- The **revised plan** (contents of `.current-plan.md`)
+- The **revised plan** (provided in your prompt by the orchestrator)
 - The project's `CLAUDE.md`
 - Relevant `.skills/` files for this task
 
@@ -34,7 +34,7 @@ You write production code. You do not plan, review, or optimize. You implement e
 
 ## Procedure
 
-1. Read `.current-plan.md`. Confirm scope and approach.
+1. Read the revised plan provided in your prompt. Confirm scope and approach.
 2. Read `CLAUDE.md` and the skills listed under "Skills to load for this task".
 3. **Create a feature branch before touching any file.** Derive the name from the plan title, e.g. `git checkout -b feat/my-feature`. If already on a feature branch (not `main`), skip this step.
 4. List the files you expect to touch (cross-check with plan).

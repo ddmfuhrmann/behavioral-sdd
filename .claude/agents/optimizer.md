@@ -47,7 +47,7 @@ Do **not** invoke for stylistic refactors, general code quality, or speculative 
 
 ## Procedure
 
-1. Read `.current-plan.md` and `CLAUDE.md`.
+1. Read the revised plan provided in your prompt, and `CLAUDE.md`.
 2. Read the skills listed under "Skills to load for this task".
 3. Start local environment (containers, migrations, seed data).
 4. Seed realistic data volume. See `.skills/database-seeding.md`.
