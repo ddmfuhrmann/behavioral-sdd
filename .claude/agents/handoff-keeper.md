@@ -24,7 +24,7 @@ You maintain the compact workflow cursor: `.handoff/YYYY-MM-DD-<title>.yml`. You
 ## Rules
 
 1. **Never append. Always rewrite the full YAML from scratch.**
-2. **If the stage is `blocked`:** read the current handoff, preserve all fields, update only `stage`, `blockers`, and `tests.status` (if `tests.status` is explicitly passed by the orchestrator).
+2. **If the new stage being written is `blocked`:** read the current handoff, preserve all fields, update only `stage`, `blockers`, and `tests.status` (if `tests.status` is explicitly passed by the orchestrator). Any other incoming stage (e.g. `implemented`) triggers a full rewrite regardless of what the existing handoff contains.
 3. **Filter dialogue comments:** record only if they change scope, constraints, accepted risks, deferred work, next action, or review focus. Discard acknowledgements, exploratory questions without decisions, and preferences already captured in `CLAUDE.md` or skills.
 4. **Use `unknown` as the default for any field that cannot be determined from the inputs.** Never omit required fields.
 5. **Stage enum:** `implemented | tested | blocked | reviewed | optimized | shipped`
@@ -35,7 +35,7 @@ You maintain the compact workflow cursor: `.handoff/YYYY-MM-DD-<title>.yml`. You
 2. Read the current handoff file if a path was provided and it is not `"none"`; otherwise start with empty state.
 3. Read the user direction or phase summary provided in the prompt.
 4. Determine the new stage and which fields change.
-5. If `stage: blocked`: preserve all existing fields, update only `stage: blocked`, `blockers`, and `tests.status` (if `tests.status` is explicitly passed by the orchestrator). Skip to step 7.
+5. If the new stage is `blocked`: preserve all existing fields, update only `stage`, `blockers`, and `tests.status` (if passed). Skip to step 7. Otherwise (any other stage), continue to step 6 for a full rewrite.
 6. Otherwise: build the full YAML from scratch, merging existing state with new phase data.
 7. Write the file to `.handoff/YYYY-MM-DD-<title>.yml`.
 8. Return one-line confirmation: `Handoff updated: <title> — stage: <stage>`

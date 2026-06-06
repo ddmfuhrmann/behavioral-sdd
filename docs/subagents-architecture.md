@@ -74,9 +74,12 @@ Mechanical work runs cheap, judgment runs expensive:
 - **Opus** — `reviewer`, `optimizer` (judgment, trade-off reasoning)
 
 ### 4. Context isolation
-Each subagent receives only what it needs — the plan, the prior summary, the diff.
-The reviewer sees the diff and the summaries, not the implementer's chain of
-thought. This is the core reason to use subagents instead of one long thread.
+Each subagent receives only what it needs — the plan, the handoff YAML (when
+available), and phase-specific context (diff, test output). The reviewer receives
+the handoff YAML in place of separate implementation and test summaries; the
+feature-implementer in the correction loop receives the handoff alongside the
+current test failure. Neither sees the other agent's chain of thought. This is the
+core reason to use subagents instead of one long thread.
 
 ### 5. Contract-based handoff
 Subagents do not share memory. They communicate through **structured Output blocks**
@@ -91,6 +94,12 @@ that the orchestrator relays:
 The plan itself is passed **inline in the spawn prompt** — there is no shared plan
 file the subagents read. (The canonical saved plan lives at
 `.plans/YYYY-MM-DD-<title>.md`, written by `/bsdd-plan`.)
+
+In addition to these Output blocks, the compact handoff YAML
+(`.handoff/YYYY-MM-DD-<title>.yml`) carries post-plan decisions (constraints,
+accepted risks, deferred work) and phase state across agent boundaries and
+sessions — replacing or supplementing the Output blocks as the primary context
+passed to the reviewer and the correction loop.
 
 ---
 
