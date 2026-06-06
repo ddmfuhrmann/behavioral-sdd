@@ -118,6 +118,12 @@ In both cases, the report is saved locally in `.plans/YYYY-MM-DD-<title>-optimiz
 
 Creates a PRD via conversational grill-me. Use for larger-scope features before `/bsdd-plan`. One question at a time: name, problem, measurable objective, requirements, out of scope, acceptance criteria, blockers. For features estimated to exceed 500 lines, a slice decomposition loop is triggered before saving: each slice receives a kebab-case title, description, estimated line count, and dependencies. The saved PRD includes a `## Slices` table. If decomposition is declined, a note is added to the PRD instead.
 
+### /bsdd-handoff \<title\>
+
+Updates the compact handoff file (`.handoff/YYYY-MM-DD-<title>.yml`) with decisions made in the orchestrator's dialogue. Use when you make a scope change, accept a risk, defer work, or otherwise change future execution context outside of a normal phase transition.
+
+Spawns `handoff-keeper` with the current plan, the existing handoff file (if any), and the user's direction from the dialogue.
+
 ### /bsdd-sync-patterns
 
 Scans the source tree and rewrites `.skills/patterns.md` with updated canonical snippets. Run after implementing a new pattern that other agents should follow.
@@ -131,6 +137,7 @@ Scans the source tree and rewrites `.skills/patterns.md` with updated canonical 
 | `/bsdd-prd` | Before plan, for larger-scope features |
 | `/bsdd-plan` | Always — entry point of the cycle |
 | `/bsdd-implement <title>` | After grill-me completes and plan is saved |
+| `/bsdd-handoff <title>` | After any dialogue decision that changes future execution |
 | `/bsdd-ship` | After implement completes successfully |
 | `/bsdd-optimize <title>` | Performance — standalone or post-implement |
 | `/bsdd-sync-patterns` | After implementing a new relevant pattern |
@@ -141,12 +148,13 @@ Scans the source tree and rewrites `.skills/patterns.md` with updated canonical 
 
 | Type | Agent | Model | Responsibility |
 |---|---|---|---|
-| Orchestrator | `/bsdd-plan`, `/bsdd-implement`, `/bsdd-ship`, `/bsdd-optimize`, `/bsdd-prd` | Sonnet 4.6 (inline) | Coordinates flow, uses AskUserQuestion, never writes code |
+| Orchestrator | `/bsdd-plan`, `/bsdd-implement`, `/bsdd-ship`, `/bsdd-optimize`, `/bsdd-prd`, `/bsdd-handoff` | Sonnet 4.6 (inline) | Coordinates flow, uses AskUserQuestion, never writes code |
 | Domain | `feature-implementer` | Sonnet 4.6 | Writes production code |
 | Domain | `test-implementer` | Sonnet 4.6 | Writes and runs tests |
 | Domain | `reviewer` | Opus 4.8 | Audits diff vs plan |
 | Optimizer | `optimizer` | Opus 4.8 | Measurement + optimization loop, evidence-based |
 | Integration | `git-agent` | Haiku 4.5 | Branch, commit, PR |
+| State | `handoff-keeper` | Sonnet 4.6 | Rewrites `.handoff/` YAML at each phase transition |
 
 **Isolation principle:** domain agents never call git directly — they delegate to `git-agent` via the orchestrator.
 
@@ -160,6 +168,7 @@ Scans the source tree and rewrites `.skills/patterns.md` with updated canonical 
 | `.prds/YYYY-MM-DD-<title>.md` | PRD with frontmatter |
 | `.plans/YYYY-MM-DD-<title>-optimization.md` | Optimization report |
 | `.ship/YYYY-MM-DD-<title>/` | Review summary, ADRs, handoff doc |
+| `.handoff/YYYY-MM-DD-<title>.yml` | Compact workflow state cursor — overwritten at each phase transition |
 | `.skills/patterns.md` | Canonical codebase snippets (updated via `/bsdd-sync-patterns`) |
 | `docs/workflow.md` | This document (English) |
 | `docs/workflow.pt-br.md` | This document (Português BR) |
