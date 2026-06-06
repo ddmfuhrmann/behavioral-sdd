@@ -217,6 +217,11 @@ sequences) or an explicit flag. The auto machinery is **dormant** otherwise.
 Nothing about the manual path changes. `decide(guided)` is literally a wrapper around
 today's `AskUserQuestion`.
 
+> **Before v1/v2 — the `/goal` spike.** The smallest buildable first step (a
+> `/goal`-driven `/bsdd-fix` loop) is spec'd separately in
+> [`goal-spike.md`](goal-spike.md). Prove the `/goal` mechanic there, cheaply, before
+> investing in `/bsdd-run`.
+
 ## Incremental path
 
 - **v1 — `/bsdd-run --auto-full` alone:** sequence + `decide(auto)` + ledger +
