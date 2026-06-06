@@ -156,6 +156,8 @@ See `docs/workflow.md` for the full guide (with optimize and PRD flows).
 | Optimizer | `optimizer` | Opus 4.8 | Measurement + optimization loop, evidence-based |
 | Integration | `git-agent` | Haiku 4.5 | Branch, commit, PR — only integration agent |
 
+> For the full design rationale — tool scoping, model tiering, handoff contracts, context isolation, and known gaps — see [`docs/subagents-architecture.md`](docs/subagents-architecture.md).
+
 ---
 
 ## Getting started
@@ -304,6 +306,12 @@ The workflow is intentionally file-based. Plans, PRDs, ADRs, and handoff documen
 This is a deliberate tradeoff. The same artifacts could be managed through MCP servers: a Notion or Linear integration that persists PRDs and ADRs as structured records, queries the backlog to inform `/bsdd-plan`, or posts review findings directly to the issue tracker. The command and agent layer would stay the same; only the read/write surface of each artifact would change.
 
 If your team already lives in one of those tools, replacing the file-based artifact layer with MCP calls is a natural extension point.
+
+---
+
+## Future ideas
+
+Exploratory notes on Claude Code primitives that could strengthen the workflow. See [`docs/brainstorm.md`](docs/brainstorm.md).
 
 ---
 
