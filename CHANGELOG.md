@@ -8,6 +8,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+- `handoff-keeper` subagent: narrow state manager that rewrites `.handoff/YYYY-MM-DD-<title>.yml` at each phase transition; uses Read, Write, Edit on Sonnet 4.6; never implements, reviews, or plans
+- `/bsdd-handoff` command: promotes dialogue decisions (scope changes, accepted risks, deferred work, next actions) into the compact handoff YAML; spawns `handoff-keeper` with current plan + handoff path + user direction
+- Compact handoff artifact: `.handoff/YYYY-MM-DD-<title>.yml` — a structured YAML state cursor (stage, changed_files, implementation status, test status, constraints, deferred, blockers, notes_for_next_agent) overwritten on each successful phase transition
+- Stage enum: `implemented | tested | blocked | reviewed | optimized | shipped`
+- `bsdd-implement`: spawns `handoff-keeper` after feature-implementer completes (stage=implemented), after tests pass (stage=tested), and before the circuit-breaker checkpoint (stage=blocked)
+- `bsdd-ship`: reads existing handoff before grill-me questions (pre-fills where possible); spawns `handoff-keeper` after PR is created (stage=shipped)
+- `bsdd-optimize`: spawns `handoff-keeper` after optimizer completes in both with-criteria and without-criteria flows (stage=optimized)
+- `.handoff/` added to `.gitignore` alongside `.plans/`, `.prds/`, `.ship/`
+
 ---
 
 ## [0.0.3] - 2026-06-05

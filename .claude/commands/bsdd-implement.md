@@ -11,15 +11,24 @@ Orchestrates the complete implementation: code + tests, with automatic correctio
 
 1. Locate the file `.plans/YYYY-MM-DD-<title>.md` and read it.
 2. Spawn the `feature-implementer` with the full plan content.
+   - 2b. After `feature-implementer` completes successfully: ensure `.handoff/` directory exists (`mkdir -p .handoff` if needed). Then spawn `handoff-keeper` with:
+     - Plan path: `.plans/YYYY-MM-DD-<title>.md`
+     - Handoff path: `.handoff/YYYY-MM-DD-<title>.yml` if it exists, otherwise `"none"`
+     - Phase summary: `stage=implemented`, `changed_files` and `implementation` fields extracted from the Implementation Summary already returned by the feature-implementer above (available in memory before proceeding to step 3)
 3. Read the implementation summary produced by the `feature-implementer`:
    - If **Deviations** is non-empty, note the delta explicitly.
    - Spawn the `test-implementer` with the plan + implementation summary, highlighting any deviations so tests target the actual implementation, not the original plan.
-4. If tests pass: go to step 8.
+4. If tests pass: spawn `handoff-keeper` with:
+   - Plan path: `.plans/YYYY-MM-DD-<title>.md`
+   - Handoff path: `.handoff/YYYY-MM-DD-<title>.yml`
+   - Phase summary: `stage=tested`, full `tests` block (`status=pass`, test command used, `failures=[]`, gaps from test summary)
+   - Then go to step 8.
 5. If tests fail, record the error signature (first error message + location). Then:
    - Spawn the `feature-implementer` again with the plan + test failure output to fix.
    - Spawn the `test-implementer` again.
 6. **Circuit breaker:** if the new error signature matches the previous attempt's signature, abort immediately — do not consume the remaining tries. Go to step 7.
 7. Checkpoint via `AskUserQuestion` (on 4th failure or circuit breaker trigger):
+   - Before asking: spawn `handoff-keeper` with: plan path, `.handoff/YYYY-MM-DD-<title>.yml` (or `"none"`), `stage=blocked`, `blockers` = current failure signature, `tests.status=fail`. The keeper preserves all other fields.
    - "Try 3 more times" (Recommended)
    - "I want to intervene now"
    - "Abandon and see current state"

@@ -45,6 +45,7 @@ strip away. See [Known gaps](#known-gaps).
 | `reviewer` | Opus 4.8 | Read, Bash | Audits the diff against the plan; quality gate | `/bsdd-ship` |
 | `optimizer` | Opus 4.8 | Read, Write, Edit, Bash | Evidence-based performance work (measure → change → measure) | `/bsdd-optimize` |
 | `git-agent` | Haiku 4.5 | Bash | Git operations: branches, commits, diffs, PRs | orchestrators only |
+| `handoff-keeper` | Sonnet 4.6 | Read, Write, Edit | Rewrites `.handoff/YYYY-MM-DD-<title>.yml` at each phase transition; narrow state manager, not a domain agent | `/bsdd-implement`, `/bsdd-ship`, `/bsdd-optimize`, `/bsdd-handoff` |
 
 ---
 

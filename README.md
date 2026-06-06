@@ -139,6 +139,7 @@ See `docs/workflow.md` for the full guide (with optimize and PRD flows).
 | `/bsdd-prd` | Before plan, for larger-scope features; triggers slice decomposition for features > 500 lines |
 | `/bsdd-plan` | Always — entry point of the cycle |
 | `/bsdd-implement <title>` | After grill-me completes and plan is saved |
+| `/bsdd-handoff <title>` | After any dialogue decision that changes future execution (scope, constraints, accepted risks, deferred work) |
 | `/bsdd-ship` | After implement completes successfully |
 | `/bsdd-optimize <title>` | Performance — standalone or triggered after implement |
 | `/bsdd-sync-patterns` | After implementing a new pattern other agents should follow |
@@ -149,11 +150,12 @@ See `docs/workflow.md` for the full guide (with optimize and PRD flows).
 
 | Tier | Agent | Model | Responsibility |
 |---|---|---|---|
-| Orchestrator | `/bsdd-plan`, `/bsdd-implement`, `/bsdd-ship`, `/bsdd-optimize`, `/bsdd-prd` | Sonnet 4.6 (inline) | Coordinates flow, uses AskUserQuestion, never writes code |
+| Orchestrator | `/bsdd-plan`, `/bsdd-implement`, `/bsdd-ship`, `/bsdd-optimize`, `/bsdd-prd`, `/bsdd-handoff` | Sonnet 4.6 (inline) | Coordinates flow, uses AskUserQuestion, never writes code |
 | Domain | `feature-implementer` | Sonnet 4.6 | Writes production code |
 | Domain | `test-implementer` | Sonnet 4.6 | Writes and runs tests |
 | Domain | `reviewer` | Opus 4.8 | Audits diff vs plan |
 | Optimizer | `optimizer` | Opus 4.8 | Measurement + optimization loop, evidence-based |
+| State | `handoff-keeper` | Sonnet 4.6 | Rewrites `.handoff/` YAML at each phase transition |
 | Integration | `git-agent` | Haiku 4.5 | Branch, commit, PR — only integration agent |
 
 > For the full design rationale — tool scoping, model tiering, handoff contracts, context isolation, and known gaps — see [`docs/subagents-architecture.md`](docs/subagents-architecture.md).

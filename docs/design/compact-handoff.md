@@ -144,20 +144,23 @@ This keeps the main context window small while avoiding a second broad context
 artifact. The loop has one contract (`.plans/...md`) and one compact cursor
 (`...-handoff.yml`).
 
-## Open choice
+## Decisions
 
-The handoff could live beside the plan:
+The following choices were open at design time and are now closed.
 
-```text
-.plans/YYYY-MM-DD-title.md
-.plans/YYYY-MM-DD-title-handoff.yml
-```
-
-Or in a dedicated directory:
+**Location:** dedicated directory.
 
 ```text
 .handoff/YYYY-MM-DD-title.yml
 ```
 
-Keeping it beside the plan makes discovery simple. A dedicated directory keeps plan
-contracts visually separate from mutable workflow state.
+A dedicated directory keeps plan contracts (`.plans/`) visually separate from mutable
+workflow state (`.handoff/`). The directory is gitignored by default alongside `.plans/`,
+`.prds/`, and `.ship/`.
+
+**Stage enum:** `implemented | tested | blocked | reviewed | optimized | shipped`
+
+**Model for `handoff-keeper`:** `claude-sonnet-4-6`
+
+The keeper is a narrow state manager — it reads, merges, and rewrites a small YAML file.
+Sonnet is sufficient; Opus would be overkill for mechanical field updates.
