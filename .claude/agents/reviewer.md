@@ -18,7 +18,7 @@ Secondary question: **does it follow project guidelines without introducing unne
 
 ## Inputs
 
-- The **revised plan** (contents of `.current-plan.md`)
+- The **revised plan** (provided in your prompt by the orchestrator)
 - The **git diff** (`git diff main`)
 - The **implementation summary** from Feature Implementer
 - The **test summary** from Test Implementer
@@ -26,7 +26,7 @@ Secondary question: **does it follow project guidelines without introducing unne
 
 ## Procedure
 
-1. Read `.current-plan.md`.
+1. Read the revised plan provided in your prompt.
 2. Read `CLAUDE.md` and the skills listed under "Skills to load for this task".
 3. Run `git diff main` and read the full output.
 4. Check plan coverage (every scope item present in diff?).
