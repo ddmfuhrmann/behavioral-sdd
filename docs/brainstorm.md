@@ -8,7 +8,7 @@
 | # | Idea | Fits which gate / step | Effort | Status |
 |---|---|---|---|---|
 | 1 | **Hooks (`PreToolUse`)** — enforce gates programmatically | The 3 hard rules in `CLAUDE.md` | Medium | To prototype |
-| 2 | **`/goal`** — keep working until criteria hold | `/bsdd-implement`, `/bsdd-optimize` | Low | To document |
+| 2 | **`/goal`** — keep working until criteria hold | termination oracle for `/bsdd-run --auto` (#6); *not* inside single commands | Low (coupled to #6) | [Designed](design/unattended-run.md) |
 | 3 | **Plugin + marketplace packaging** | Distribution of the whole framework | Medium | To explore |
 | 4 | **MCP servers** | external integrations (issues, docs) | Varies | Backlog |
 | 5 | **`/schedule` routines & `/loop`** | unattended ship / nightly review | Low | Backlog |
@@ -37,6 +37,10 @@ in `.plans/`. This moves governance from "instruction the model should follow" t
   hook for hard gates.
 
 ## 2. `/goal` — work across turns until criteria hold
+
+> **Deep-dive:** the full design — `/goal` + `/bsdd-run` + the `decide(auto)` policy,
+> the decision ledger, and the PR-as-async-review model — is written up in
+> [`docs/design/unattended-run.md`](design/unattended-run.md). The notes below are the seed.
 
 Requires Claude Code **v2.1.139+**. You set a completion condition; Claude keeps
 taking turns (no re-prompting) until a small fast model (Haiku by default) confirms
@@ -92,6 +96,10 @@ time interval; `/schedule` runs independent of any open session.
 
 ## 6. `/bsdd-run` — full-loop orchestrator (no per-command invocation)
 
+> **Deep-dive:** the `--auto` / `--auto-full` design, the `decide(auto)` gate policy,
+> the guided-default backward-compat invariant, and the blast radius are detailed in
+> [`docs/design/unattended-run.md`](design/unattended-run.md).
+
 A top-level command in the **main session** that sequences the phases
 (plan → implement → ship → optionally optimize) by invoking each skill in order.
 Auto-chaining must live **here**, above the commands — a running phase cannot trigger
@@ -132,7 +140,7 @@ Levers, lightest first:
 ## Open questions / next steps
 
 - [ ] Prototype the `PreToolUse` plan-gate hook and measure false positives.
-- [ ] Draft a `workflow.md` section: combining `/goal` with `implement`/`ship`/`optimize` + recommended condition formats.
+- [x] Draft the `/goal` + `/bsdd-run` design → [`docs/design/unattended-run.md`](design/unattended-run.md) (unattended run + async review, decision ledger, blast radius, guided-default invariant).
 - [ ] Spike: minimal plugin manifest that bundles skills + agents + hooks.
 - [ ] Lock the list of **sacred gates** for `/bsdd-run --auto` (proposed: plan approval, grill-me handoff, per-finding decisions).
 - [ ] Write the curated permission preset + permissions addendum doc (referenced from README).
