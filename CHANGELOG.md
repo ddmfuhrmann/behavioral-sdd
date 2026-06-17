@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.0.4] - 2026-06-17
+
+### Changed
+- `bsdd-plan`: plan approval now uses native plan mode — the command runs inside `EnterPlanMode` and presents the plan through `ExitPlanMode`, giving the native approval UI (including auto-accept) instead of going straight from text to a saved file; the `.plans/` copy is written only after approval
+- `bsdd-plan`: after approval, the command auto-chains into `/bsdd-implement <title>` (via the Skill tool) so an approved-with-auto-accept plan flows straight into implementation in the same run
+
+---
+
 ## [0.0.3] - 2026-06-05
 
 ### Added
