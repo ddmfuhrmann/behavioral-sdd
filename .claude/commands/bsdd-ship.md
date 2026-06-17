@@ -16,7 +16,7 @@ Unifies review, ADR check, and handoff into a single conversational flow. Trigge
    - `trivy`: enabled if `docker info` exits 0
    A plugin with `enabled: false` is always skipped. A plugin with `enabled: true` always runs regardless of auto-detection.
 4. **Spawn reviewer + active plugins in parallel** — all in the same message turn, so they run concurrently:
-   - Always spawn the `reviewer` sub-agent with: plan content + diff + implementation summary + test summary. The reviewer follows `.skills/plugins/diff-review.md` and returns severity-labeled findings.
+   - Read `.handoff/YYYY-MM-DD-<title>.yml` if it exists. Spawn the `reviewer` sub-agent with: plan content + diff + handoff YAML (replaces separate implementation summary and test summary — contains `changed_files`, `implementation`, `tests`, `constraints`, `accepted_risks`, `deferred`). If no handoff exists, fall back to passing implementation summary + test summary from conversation context. If neither handoff nor conversation summaries are available (e.g. context was compacted), halt and ask the user to run `/bsdd-handoff <title>` to reconstruct state before continuing. The reviewer follows `.skills/plugins/diff-review.md` and returns severity-labeled findings.
    - For each active plugin, spawn a separate sub-agent that reads `.skills/plugins/<name>.md` and executes the full procedure described there. Pass it the list of files changed in the diff so it filters findings to that scope only.
 5. **Merge findings** — collect the findings from the reviewer and all plugin sub-agents. Deduplicate: if the same file+line is flagged by multiple sources, keep the highest severity. Prefix each finding with its source in brackets: `[REVIEWER]`, `[SONAR]`, `[XLINT]`, `[TRIVY]`. Present a brief summary of which plugins ran and how many findings each produced before entering the finding loop.
 6. For each relevant finding (merged list), use `AskUserQuestion`:
@@ -26,9 +26,14 @@ Unifies review, ADR check, and handoff into a single conversational flow. Trigge
    - Present via `AskUserQuestion`: "Record all" / "Choose which" / "None for now".
    - If recording: save ADR(s) locally in `.ship/YYYY-MM-DD-<title>/adrs/`.
 8. Handoff grill-me — use `AskUserQuestion` to collect context:
+   - Before asking questions: read `.handoff/YYYY-MM-DD-<title>.yml` if it exists. Use existing handoff content as context — skip or pre-fill questions whose answers are already captured there.
    - "What is the next step after this delivery?" (options based on context)
    - "Are there pending decisions that should be recorded?"
    - "Are there known risks for production?"
 9. Save locally in `.ship/YYYY-MM-DD-<title>/`: review summary + ADRs (if any) + handoff doc. These files are listed in `.gitignore` and must **not** be committed.
 10. Spawn the `git-agent` to create the PR with the generated summary. Pass only source-code files as the files to stage — never `.plans/`, `.ship/`, or `.prds/` paths.
-11. Confirm with the PR URL created.
+11. After PR is created: ensure `.handoff/` directory exists (`mkdir -p .handoff` if needed). Then spawn `handoff-keeper` with:
+    - Plan path: `.plans/YYYY-MM-DD-<title>.md`
+    - Handoff path: `.handoff/YYYY-MM-DD-<title>.yml` if it exists, otherwise `"none"`
+    - Phase summary: `stage=shipped`, `ready_for_ship=true` (was ready and has been delivered), PR URL in `notes_for_next_agent`
+12. Confirm with the PR URL created.
