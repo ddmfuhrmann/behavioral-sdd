@@ -66,7 +66,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Skills: `caveman`, `karpathy-guidelines`, `code-style`, `diff-review`, `grill-me`, `plan-first-development`, `edge-case-generation`, `error-handling`, `testing-strategy`, `benchmark-execution`, `database-seeding`, `postgres-explain-analyze`, `optimization-reporting`
 - Workflow documentation in English (`docs/workflow.md`) and Portuguese BR (`docs/workflow.pt-br.md`)
 
-[Unreleased]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.0...v0.0.1
