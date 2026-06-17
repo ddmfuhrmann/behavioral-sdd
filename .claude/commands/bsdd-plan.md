@@ -35,4 +35,5 @@ Entry point of the development cycle. Transforms any input (conversation, ticket
      title: <title>
      ---
      ```
-   - Suggest: `Plan saved. Run /bsdd-implement <title> to continue.`
+   - Tell the user: `Plan saved. Continuing with /bsdd-implement <title>.`
+   - Then immediately invoke the `bsdd-implement` skill (via the Skill tool) with `<title>` as its argument, so implementation continues in the same run without the user having to type the command. The native auto-accept choice made at `ExitPlanMode` carries over, so an approved-with-auto-accept plan flows straight into implementation.
