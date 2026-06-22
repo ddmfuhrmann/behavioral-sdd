@@ -2,44 +2,42 @@
 
 ## Purpose
 
-Scans project dependencies for known CVEs — covers direct and transitive dependencies. SonarQube Community does not include this check.
+Scans project dependencies for known CVEs — direct and transitive. SonarQube Community
+does not include this check.
+
+The procedure is fully scripted in [`trivy.sh`](trivy.sh). This file is the contract,
+not a procedure to execute by hand.
 
 ## Auto-detection
 
-When `enabled: auto`: active if Docker is available (`docker info` exits 0).
-When `enabled: true`: always active; fail with `[TRIVY BLOCKED]` if Docker unavailable.
+- `enabled: auto` → active if Docker is available (`docker info` exits 0).
+- `enabled: true` → always active.
 
-## Procedure
+`trivy.sh` self-guards: with Docker unavailable it prints
+`Trivy: skipped (Docker unavailable).` and exits 0.
 
-### 1. Run Trivy
+## Prerequisites
+
+- **Docker** running, and **`jq`** on PATH.
+
+## Invocation
 
 ```bash
-docker run --rm \
-  -v "$(pwd):/project" \
-  aquasec/trivy:latest fs /project \
-  --scanners vuln \
-  --severity HIGH,CRITICAL \
-  --format json \
-  --quiet \
-  2>/dev/null
+.skills/plugins/trivy.sh
 ```
 
-If Docker is unavailable or the image fails to run: skip silently and emit `Trivy: skipped (Docker unavailable).`
+**No diff filter** — a CVE in a dependency is not tied to a changed line; the scan is
+over the dependency tree, not the diff. The script runs Trivy (`fs`, `--scanners vuln`,
+`--severity HIGH,CRITICAL`, JSON), parses with `jq`, dedupes by `VulnerabilityID` +
+`PkgName`, and formats.
 
-### 2. Parse JSON output
-
-Extract from `.Results[].Vulnerabilities[]`:
-- `VulnerabilityID` — CVE ID
-- `PkgName` + `InstalledVersion` — affected library
-- `Severity` — `HIGH` or `CRITICAL`
-- `Title` — short description
-- `CVSS.nvd.V3Score` or `CVSS.ghsa.V3Score` — numeric score
-
-Deduplicate by `VulnerabilityID` + `PkgName`.
+- **stdout:** reviewer-format findings (see below).
+- **exit 0:** ran or skipped.
+- **exit ≠ 0:** blocked (e.g. `[TRIVY BLOCKED] jq not found`).
 
 ## Severity mapping
 
-| Trivy severity | → Reviewer severity |
+| Trivy severity | → Reviewer |
 |---|---|
 | CRITICAL | BLOCKER |
 | HIGH | WARNING |
@@ -50,7 +48,7 @@ Deduplicate by `VulnerabilityID` + `PkgName`.
 ### Dependency Vulnerability Scan
 
 [BLOCKER] commons-lang3:3.17.0 — CVE-2025-XXXX Remote code execution via deserialization (CVSS 9.8)
-[WARNING]  jackson-databind:2.17.0 — CVE-2024-XXXX Deserialization of untrusted data (CVSS 7.5)
+[WARNING] jackson-databind:2.17.0 — CVE-2024-XXXX Deserialization of untrusted data (CVSS 7.5)
 ```
 
-If no vulnerabilities: emit `Trivy: no HIGH/CRITICAL vulnerabilities found.`
+No vulnerabilities → `Trivy: no HIGH/CRITICAL vulnerabilities found.`
