@@ -10,6 +10,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [0.0.5] - 2026-06-22
+
+### Added
+- `.skills/plugins/sonar.sh`, `.skills/plugins/xlint-removal.sh`, `.skills/plugins/trivy.sh` — each plugin's full procedure as a self-contained script that emits reviewer-format findings on stdout (noise to stderr, non-zero exit = blocked)
+- `sonar.sh` prepare hook: an optional, build-system-agnostic prepare command (compile + dependency-classpath staging) resolved as `--prepare "<cmd>"` (orchestrator-inferred when undeclared) → a `# bsdd.sonar.prepare=` line in `sonar-project.properties` → none
+
+### Changed
+- `bsdd-ship`: plugins now run via a single **Haiku** plugin-runner sub-agent — a context firewall that executes the `.sh` scripts and returns their stdout verbatim — spawned in parallel with the **Opus** reviewer; cross-source merge/dedupe stays in the orchestrator. Replaces the previous LLM-driven, step-by-step plugin execution
+- `reviewer`: no longer runs plugins (removed the plugin loop and the conditional plugin skill loads); focuses on plan audit + guidelines
+- `.skills/plugins/{sonar,xlint-removal,trivy}.md`: reduced from executable procedures to thin script contracts (purpose, auto-detection, prerequisites, invocation, output format)
+
+---
+
 ## [0.0.4] - 2026-06-17
 
 ### Changed
@@ -66,7 +79,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Skills: `caveman`, `karpathy-guidelines`, `code-style`, `diff-review`, `grill-me`, `plan-first-development`, `edge-case-generation`, `error-handling`, `testing-strategy`, `benchmark-execution`, `database-seeding`, `postgres-explain-analyze`, `optimization-reporting`
 - Workflow documentation in English (`docs/workflow.md`) and Portuguese BR (`docs/workflow.pt-br.md`)
 
-[Unreleased]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/ddmfuhrmann/behavioral-sdd/compare/v0.0.1...v0.0.2
