@@ -2,54 +2,48 @@
 
 ## Purpose
 
-Detects usage of APIs annotated `@Deprecated(forRemoval=true)` — the JDK flags these natively but standard static analysis tools miss them because they require indexing dependency JARs deeply.
+Detects usage of APIs annotated `@Deprecated(forRemoval=true)` — the JDK flags these
+natively (`-Xlint:removal`) but standard static analysis tools miss them because they
+require indexing dependency JARs deeply.
 
-## Scope
+The procedure is fully scripted in [`xlint-removal.sh`](xlint-removal.sh). This file is
+the contract, not a procedure to execute by hand.
 
-Java projects only. Skip for non-Java projects (no `build.gradle.kts`, `build.gradle`, or `pom.xml` at the root).
+## Scope & auto-detection
 
-## Auto-detection
+Java projects only.
 
-When `enabled: auto`: active if `build.gradle.kts`, `build.gradle`, or `pom.xml` exists at the project root.
-When `enabled: true`: always active; emit skip message if no Java build file found.
+- `enabled: auto` → active if `build.gradle.kts`, `build.gradle`, or `pom.xml` exists
+  at the project root.
+- `enabled: true` → always active.
 
-## Procedure
+`xlint-removal.sh` self-guards: with no Java build file it prints
+`Compiler: skipped (no Java build file).` and exits 0.
 
-### 1. Create temporary Gradle init script
+## Prerequisites
 
-```bash
-INIT_SCRIPT=$(mktemp /tmp/xlint-removal-XXXXXX.gradle.kts)
-cat > "$INIT_SCRIPT" << 'GRADLE'
-allprojects {
-    tasks.withType<JavaCompile> {
-        options.compilerArgs.addAll(listOf("-Xlint:removal"))
-    }
-}
-GRADLE
-```
+- A Gradle (`build.gradle.kts` / `build.gradle`) or Maven (`pom.xml`) build at the root.
+- The build must be able to `compileJava` (Gradle) / `compile` (Maven). **Tests are not
+  run** — `compileJava` is the minimal target for detecting deprecation-for-removal.
 
-**Maven variant:** if only `pom.xml` is present (no Gradle files), run:
+## Invocation
 
 ```bash
-mvn compile -q -Dmaven.compiler.showWarnings=true -Dmaven.compiler.verbose=false 2>&1 \
-  | grep -E "warning:.*\[removal\]" \
-  | sort -u
+.skills/plugins/xlint-removal.sh
 ```
 
-### 2. Compile with removal warnings enabled
+Gradle path compiles with `-Xlint:removal` injected via a temporary init script and
+`--rerun` (incremental compile would skip unchanged files and miss their warnings).
+Maven path uses `mvn compile` with compiler warnings enabled.
 
-```bash
-./gradlew compileJava --rerun --init-script "$INIT_SCRIPT" 2>&1 \
-  | grep -E "warning:.*\[removal\]" \
-  | sort -u
-rm -f "$INIT_SCRIPT"
-```
-
-Do not fail the review if compilation itself fails — only report `[removal]` lines.
+- **stdout:** `[BLOCKER]` findings (see below).
+- **exit 0:** always — a failing compile is **not** a review failure; only `[removal]`
+  lines are reported.
 
 ## Severity mapping
 
-All `[removal]` warnings → **[BLOCKER]**: APIs marked for removal will break on the next major version upgrade.
+All `[removal]` warnings → **BLOCKER**: APIs marked for removal break on the next major
+version upgrade.
 
 ## Output format
 
@@ -59,4 +53,4 @@ All `[removal]` warnings → **[BLOCKER]**: APIs marked for removal will break o
 [BLOCKER] sales/application/usecase/ListCommissionsUseCase.java:41 — where(Specification<T>) in JpaSpecificationExecutor has been deprecated and marked for removal
 ```
 
-If no warnings: emit `Compiler: no removal warnings found.`
+No warnings → `Compiler: no removal warnings found.`

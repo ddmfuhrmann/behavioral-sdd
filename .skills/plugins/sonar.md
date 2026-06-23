@@ -2,179 +2,108 @@
 
 ## Purpose
 
-Run SonarQube static analysis on the project and return severity-labeled findings mapped to the reviewer format. Requires only Docker — no manual token setup or extra CLI installation.
+Run SonarQube static analysis and return severity-labeled findings in reviewer
+format. Requires only Docker — no manual token setup or extra CLI installation.
 
-> **Experimental.** This integration works well in practice but has not been widely validated across stacks and CI configurations. Treat findings as supplementary signal, not a hard gate.
+> **Experimental.** Works well in practice but is not widely validated across stacks
+> and CI configurations. Treat findings as supplementary signal, not a hard gate.
+
+The procedure is fully scripted in [`sonar.sh`](sonar.sh) — the orchestrator runs the
+script and consumes its stdout. This file is the contract, not a procedure to execute
+by hand.
 
 ## Auto-detection
 
-When `enabled: auto`: active only if `sonar-project.properties` exists at the project root.
-When `enabled: true`: always active.
+- `enabled: auto` → active only if `sonar-project.properties` exists at the project root.
+- `enabled: true` → always active.
 
-## Docker resources
+`sonar.sh` self-guards: if `sonar-project.properties` is missing it prints
+`Sonar: skipped (no sonar-project.properties).` and exits 0.
 
-| Resource | Name |
-|---|---|
-| Network | `bsdd-sonar-net` |
-| Server container | `bsdd-sonarqube` |
-| Scanner container | ephemeral (`sonarsource/sonar-scanner-cli`) |
+## Prerequisites
 
-## Token management
+- **Docker** running, and **`jq`** on PATH.
+- A `sonar-project.properties` at the root, kept to **project identity only** — do not
+  hardcode `sonar.host.url` or `sonar.token` (they differ between local and CI and
+  would break a pipeline runner). The script injects host/token at runtime.
 
-The plugin auto-generates a SonarQube token on first use and stores it in `.bsdd-sonar-token` at the project root. Subsequent runs read from this file. No manual token setup required.
+  ```properties
+  # sonar-project.properties — safe to commit
+  sonar.projectKey=my-project
+  sonar.sources=src
+  sonar.exclusions=**/test/**,**/vendor/**
+  ```
 
-`.bsdd-sonar-token` must be gitignored — add it if not already present:
+- The script auto-generates a token on first use and stores it in `.bsdd-sonar-token`
+  (gitignored, added automatically if missing).
 
-```bash
-echo ".bsdd-sonar-token" >> .gitignore
+## Prepare step (compiled projects)
+
+The Java sensor needs **compiled bytecode** (`sonar.java.binaries`) and the **dependency
+classpath** (`sonar.java.libraries`) — and a non-matching `libraries` glob is a hard
+error. Producing those is build-system specific, so the script does not bake it in; it
+runs an optional **prepare command**, resolved in precedence order:
+
+1. `--prepare "<cmd>"` passed by the caller (the orchestrator infers it when the project
+   declares none — see `/bsdd-ship`).
+2. a `# bsdd.sonar.prepare=<cmd>` line in `sonar-project.properties`.
+3. none → skipped (non-compiled projects need nothing).
+
+The project still owns the artifacts the command relies on — e.g. a Gradle task that
+stages the dependency jars, plus the matching `sonar.java.binaries` / `sonar.java.libraries`
+paths in `sonar-project.properties`. Example (Gradle):
+
+```kotlin
+// build.gradle.kts
+tasks.register<Copy>("sonarLibs") {
+    from(configurations.compileClasspath, configurations.testCompileClasspath)
+    into(layout.buildDirectory.dir("sonar-libs"))
+    include("*.jar")
+}
 ```
-
-## Prerequisites (project-side)
-
-The project must have a `sonar-project.properties` at the root. Keep it to **project identity only** — do not hardcode `sonar.host.url` or `sonar.token` here, as those values differ between local and CI environments and would cause CI failures if picked up by a pipeline runner:
 
 ```properties
-# sonar-project.properties — safe to commit
-sonar.projectKey=my-project
-sonar.sources=src
-sonar.exclusions=**/test/**,**/vendor/**
+# sonar-project.properties
+sonar.java.binaries=build/classes/java/main
+sonar.java.test.binaries=build/classes/java/test
+sonar.java.libraries=build/sonar-libs/*.jar
+# bsdd.sonar.prepare=./gradlew --quiet classes testClasses sonarLibs
 ```
 
-`sonar.host.url` and `sonar.token` are injected by this plugin at runtime (local) and by the CI workflow via its own flags or environment variables. No overlap, no conflict.
-
-## Procedure
-
-### 0. Resolve projectKey
-
-Read `sonar.projectKey` from `sonar-project.properties`:
+## Invocation
 
 ```bash
-PROJECT_KEY=$(grep "^sonar.projectKey" sonar-project.properties | cut -d'=' -f2 | tr -d ' ')
+.skills/plugins/sonar.sh [--prepare "<cmd>"] <changed_file>...
 ```
 
-If `PROJECT_KEY` is empty: **abort and block the review** with message:
-> `[SONAR BLOCKED] sonar.projectKey not found in sonar-project.properties`
+Pass the list of files in the diff. The script filters findings to those files; with
+no arguments it reports all issues. The optional `--prepare` runs before the scanner.
+Server lifecycle (network, container, health poll), token, scanner run, CE-queue wait,
+issue fetch, severity mapping, and diff filtering all happen inside the script.
 
-### 1. Ensure Docker network exists
+- **stdout:** reviewer-format findings (see below).
+- **exit 0:** ran (with or without findings) or skipped.
+- **exit ≠ 0:** blocked — stdout carries a `[SONAR BLOCKED] …` reason (missing
+  projectKey, server not healthy in 120s, token failure, scanner failure, CE failure).
 
-```bash
-docker network inspect bsdd-sonar-net >/dev/null 2>&1 || docker network create bsdd-sonar-net
-```
+## Severity mapping
 
-### 2. Ensure SonarQube server is running
-
-Check if the server is already healthy:
-
-```bash
-curl -s http://localhost:9000/api/system/status | grep -q '"status":"UP"'
-```
-
-If not healthy, start or create the container:
-
-```bash
-docker start bsdd-sonarqube 2>/dev/null || \
-  docker run -d \
-    --name bsdd-sonarqube \
-    --network bsdd-sonar-net \
-    -p 9000:9000 \
-    sonarqube:community
-```
-
-Poll until healthy (timeout: 120s, interval: 5s):
-
-```bash
-until curl -s http://localhost:9000/api/system/status | grep -q '"status":"UP"'; do
-  sleep 5
-done
-```
-
-If SonarQube does not become healthy within 120s: **abort and block the review** with message:
-> `[SONAR BLOCKED] bsdd-sonarqube did not become healthy within 120s. Check: docker logs bsdd-sonarqube`
-
-### 3. Resolve token
-
-```bash
-TOKEN_FILE=".bsdd-sonar-token"
-
-if [ -f "$TOKEN_FILE" ]; then
-  SONAR_TOKEN=$(cat "$TOKEN_FILE")
-else
-  # Generate token using default admin credentials (valid on a fresh local instance)
-  SONAR_TOKEN=$(curl -s -u admin:admin -X POST \
-    "http://localhost:9000/api/user_tokens/generate?name=bsdd-local" \
-    | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
-
-  if [ -z "$SONAR_TOKEN" ]; then
-    echo "[SONAR BLOCKED] Could not generate token. If the admin password was changed, create a token manually at http://localhost:9000/account/security and save it to .bsdd-sonar-token"
-    exit 1
-  fi
-
-  echo "$SONAR_TOKEN" > "$TOKEN_FILE"
-  echo ".bsdd-sonar-token" >> .gitignore
-fi
-```
-
-If token generation fails (admin password was changed from the default): block review with instructions to create the token manually at `http://localhost:9000/account/security` and save it to `.bsdd-sonar-token`.
-
-### 4. Run sonar-scanner
-
-Run as an ephemeral container on the same network. The scanner reaches the server via container name (`bsdd-sonarqube:9000`) within the network:
-
-```bash
-docker run --rm \
-  --network bsdd-sonar-net \
-  -v "$(pwd):/usr/src" \
-  sonarsource/sonar-scanner-cli \
-  -Dsonar.host.url=http://bsdd-sonarqube:9000 \
-  -Dsonar.token="${SONAR_TOKEN}"
-```
-
-If the command fails (non-zero exit): block review with the scanner output.
-
-### 5. Wait for analysis to complete
-
-Poll the Compute Engine queue until the task for this project completes (timeout: 60s):
-
-```bash
-curl -s -u "${SONAR_TOKEN}:" \
-  "http://localhost:9000/api/ce/component?component=${PROJECT_KEY}"
-```
-
-Wait until `status` is `SUCCESS`. If `FAILED`: block review with the CE task error message.
-
-### 6. Fetch issues
-
-```bash
-curl -s -u "${SONAR_TOKEN}:" \
-  "http://localhost:9000/api/issues/search?componentKeys=${PROJECT_KEY}&resolved=false&ps=500"
-```
-
-Filter results to only files present in the current diff. Ignore issues in files not touched by this change.
-
-### 7. Severity mapping
-
-| Sonar severity | Sonar type | → Reviewer severity |
+| Sonar severity | Sonar type | → Reviewer |
 |---|---|---|
 | BLOCKER | any | BLOCKER |
 | CRITICAL | any | BLOCKER |
-| MAJOR | BUG | BLOCKER |
-| MAJOR | VULNERABILITY | BLOCKER |
+| MAJOR | BUG / VULNERABILITY | BLOCKER |
 | MAJOR | CODE_SMELL | WARNING |
-| MINOR | any | SUGGESTION |
-| INFO | any | SUGGESTION |
+| MINOR / INFO | any | SUGGESTION |
 
-Security hotspots: include as WARNING regardless of severity.
-
-### 8. Output format
-
-Emit findings in the reviewer's standard format, under a dedicated section:
+## Output format
 
 ```
 ### Sonar Analysis Findings
 
 [BLOCKER] src/foo/Bar.java:42 — Cognitive Complexity of method 'process' is 25 (allowed: 15). (squid:S3776)
 [WARNING] src/foo/Bar.java:88 — Remove this unused private field 'cache'. (squid:S1068)
-[SUGGESTION] src/foo/Util.java:10 — Rename this local variable to match the regular expression '^[a-z][a-zA-Z0-9]*$'. (squid:S117)
+[SUGGESTION] src/foo/Util.java:10 — Rename this local variable to match '^[a-z][a-zA-Z0-9]*$'. (squid:S117)
 ```
 
-If no issues found in the diff scope: emit `Sonar: no issues found in changed files.`
+No issues in scope → `Sonar: no issues found in changed files.`

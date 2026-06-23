@@ -32,8 +32,9 @@ Secondary question: **does it follow project guidelines without introducing unne
 4. Check plan coverage (every scope item present in diff?).
 5. Check for scope creep (anything in diff not in plan?).
 6. Check guideline compliance.
-7. **Run plugins:** Read `.bsdd-plugins.yml` at the project root if it exists. If the file exists, parse `plugins.reviewer` to get the plugin list and each plugin's `enabled` value. If the file does not exist, treat all known plugins as `enabled: auto`. Known plugins (in default execution order): `sonar`, `xlint-removal`, `trivy`. For each plugin (in declaration order if `.bsdd-plugins.yml` exists, otherwise default order): (a) resolve `enabled` — `false` → skip entirely, emit nothing; `auto` → apply the plugin's own auto-detection (described in its file); `true` → run unconditionally. (b) If enabled (auto+detected or true): load `.skills/plugins/<name>.md`, execute its procedure, append findings under the plugin's output section. (c) If `.skills/plugins/<name>.md` is not found: emit `[WARN] Plugin '<name>' declared but .skills/plugins/<name>.md not found — skipping`. Append all plugin output after the main review findings.
-8. Produce the review summary with severity-labeled findings, including plugin sections if any plugins ran.
+7. Produce the review summary with severity-labeled findings.
+
+> Plugins (`sonar`, `xlint-removal`, `trivy`) are **not** run here. `/bsdd-ship` spawns a separate Haiku plugin-runner that executes the `.skills/plugins/*.sh` scripts, and the orchestrator merges those findings with yours. You focus on the plan audit and guidelines.
 
 ## What to look for
 
@@ -81,10 +82,6 @@ Secondary question: **does it follow project guidelines without introducing unne
 
 - <item>
 
-### Plugin Findings
-
-<findings from each plugin that ran, or omitted if no plugins were active>
-
 ### Test Coverage Assessment
 
 <brief assessment of whether tests cover the plan's assertions>
@@ -97,6 +94,3 @@ Secondary question: **does it follow project guidelines without introducing unne
 - `.skills/error-handling.md`
 - `.skills/karpathy-guidelines.md`
 - `.skills/caveman.md`
-- `.skills/plugins/sonar.md` (if sonar plugin is active)
-- `.skills/plugins/xlint-removal.md` (if xlint-removal plugin is active)
-- `.skills/plugins/trivy.md` (if trivy plugin is active)
